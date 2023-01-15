@@ -16,10 +16,17 @@ class App(Tk):
         self.title("Wifi Test Manager")
         self.geometry("1500x850")
         self.create_widgets()
+        self.refreshSpeed()
     
     def create_widgets(self):
         # create canvas
         self.canvas = FigureCanvasTkAgg(plt.gcf(), master=self)
+
+        #create label
+        self.text = StringVar()
+        self.text.set("")
+        self.label = Label(self, textvariable=self.text, font=("Calibri", 20))
+        self.label.pack(side=TOP)
 
         # create quit button
         self.button_quit = Button(self, text="Quitter", bg='red', fg='white', height=1, width=10, font=('Calibri', 20), command=self.quit)
@@ -33,6 +40,19 @@ class App(Tk):
         # place canvas
         self.canvas.get_tk_widget().pack(side=TOP, fill=BOTH, expand=True)
 
+    def refreshSpeed(self):
+        down, ping = realTimeSpeedTest()
+        if len(str(mt.floor(down))) >= 3 and len(str(mt.floor(down))) < 6:  
+            msg = str("%.2f" % (down/1000)) + " Kb/s"   
+        if len(str(mt.floor(down))) >= 6 and len(str(mt.floor(down))) < 9:
+            msg = str("%.2f" % (down/10000)) + " Mb/s" 
+        if len(str(mt.floor(down))) >= 9:
+            msg = str("%.2f" % (down/100000)) + " Gb/s"
+        
+        self.text.set(msg)
+        self.after(150, self.refreshSpeed)
+
+
 # x axis
 x_vals = []
 # value for first graph
@@ -45,7 +65,16 @@ y_mean2 = []
 index = count()
 index2 = count()
 
-def refresh(i):
+def realTimeSpeedTest():
+    # Generate values
+    test = pyspeedtest.SpeedTest("www.google.com")
+    down = test.download()
+    ping = test.ping()
+    
+    return down, ping
+        
+
+def plotSpeedTest(i):
     # Get all axes of figure
     ax1, ax2 = plt.gcf().get_axes()
     
@@ -54,10 +83,9 @@ def refresh(i):
     ax2.cla()
 
     # Generate values
-    test = pyspeedtest.SpeedTest("www.google.com")
-    down = test.download()
+    down, ping = realTimeSpeedTest()
     x_vals.append(next(index))
-    y_vals.append(test.ping())
+    y_vals.append(ping)
     if len(str(mt.floor(down))) < 3:
         y_vals2.append(down)
         ax2.set_ylabel("b/s")
@@ -94,6 +122,6 @@ if __name__ == "__main__":
     plt.style.use('fivethirtyeight')
     plt.gcf().subplots(2, 1)
 
-    ani = FuncAnimation(plt.gcf(), refresh, interval=1000, blit=False)
+    ani = FuncAnimation(plt.gcf(), func=plotSpeedTest, interval=1000, blit=False)
 
     app.mainloop()
